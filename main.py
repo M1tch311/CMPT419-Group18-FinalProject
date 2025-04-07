@@ -4,7 +4,9 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 from PIL import Image
 import threading
+import queue
 import time
+import game_script
 
 class EnjoymentClassifier(nn.Module):
     def __init__(self, num_classes):
@@ -55,7 +57,7 @@ class EnjoymentClassifier(nn.Module):
 camera_running = True
 current_emotion = 2
 
-def runcameraclassification():
+def runcameraclassification(q):  # Inserted a queue as parameter to share current_emotion value with game
     global camera_running
     global current_emotion
     camera = cv2.VideoCapture(0)
@@ -100,17 +102,19 @@ def runcameraclassification():
             resized_face = cv2.resize(cropped_face, (300, 300))
             cv2.imshow('Cropped Face', resized_face)
             cropped_face = Image.fromarray(cropped_face)
-            
+
             cropped_face = transform(cropped_face)
             cropped_face = cropped_face.to(device)
             cropped_face = torch.unsqueeze(cropped_face, 0)
             predicted_emotion = model(cropped_face).argmax()
             current_emotion = predicted_emotion
+            print("Detected Social signal:", ['angry', 'happy', 'neutral'][current_emotion])
+            q.put(int(current_emotion))
               
         # Press 'q' to exit the loop
         if cv2.waitKey(1) == ord('q'): # or cv2.getWindowProperty('Camera', cv2.WND_PROP_VISIBLE) < 1: # This one is for if the window was closed (X button)
             camera_running = False
-    
+
     camera.release()
     cv2.destroyAllWindows()
 
@@ -120,18 +124,23 @@ def printing():
     while camera_running:
         print("Detected Social signal:", ['angry', 'happy', 'neutral'][current_emotion])
 
+def thread2_function():  # Thread to start game, game script has a thread within to sync current_emotion value
+    global current_emotion
+    game_script.game_loop(current_emotion)
 
 def main():
     global camera_running
-    t1 = threading.Thread(target=runcameraclassification)
-    t2 = threading.Thread(target=printing) #NOTE: Replace this with game.
-    t1.start()
+    # t1 = threading.Thread(target=runcameraclassification)
+    # t1.daemon = True
+    # t1.start()
+    t2 = threading.Thread(target=thread2_function()) #NOTE: Replace this with game.
     t2.start()
     # Below is experimentation
-    time.sleep(10)
-    camera_running = False
-    t1.join()
+    time.sleep( 10)
     t2.join()
+    camera_running = False
+    # t1.join()
+    # t2.join()
     
 
 if __name__ == '__main__':
