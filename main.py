@@ -55,17 +55,22 @@ class EnjoymentClassifier(nn.Module):
 camera_running = True
 
 def runcameraclassification():
-    config.initialized = True
     global camera_running
+    config.initialized = True
     camera = cv2.VideoCapture(0)
+    
     # Use a pretrained model for the facial detection
     face_classifier = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    # Load the model
     model = EnjoymentClassifier(3).to(device)
     model.load_state_dict(torch.load("saved_models/model_configs/image_model_50.pth"))
     model.eval()
+
+    # Copied from model (NOTE: eval mode makes the random)
     transform = transforms.Compose([
         transforms.Grayscale(num_output_channels=1),  
         transforms.RandomHorizontalFlip(),
@@ -75,9 +80,12 @@ def runcameraclassification():
         transforms.Normalize((0.5,), (0.5,))
     ])
     debug = config.debug
+
+    # Define the colors for drawing bounding box rectangle based on emotion
     colors = [(0,0,255), (0,255,255),(255,0,0)]
     print("Camera initialized!")
     while camera_running:
+        # Read frame from camera
         _, frame = camera.read()
         detected_face_in_image = frame.copy()
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -86,6 +94,7 @@ def runcameraclassification():
         face = face_classifier.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(70,70))
 
         biggest_face_box = [0,0,-1,-1]
+
         # Draw the bounding box around the face in the image
         for (x,y,w,h) in face:
             # Take the biggest image (dont think this is the best solution, )
@@ -97,15 +106,15 @@ def runcameraclassification():
         if biggest_face_box[2] + biggest_face_box[3] > 0:
             cropped_face = frame[max(y-50, 0):y+h+50, max(x-50, 0):x+w+50]
             resized_face = cv2.resize(cropped_face, (300, 300))
-            # Show face in different window
-            # cv2.imshow('Cropped Face', resized_face)
+            
+            # Transform to prepare it for the model
             cropped_face = Image.fromarray(cropped_face)
-
             cropped_face = transform(cropped_face)
             cropped_face = cropped_face.to(device)
             cropped_face = torch.unsqueeze(cropped_face, 0)
             predicted_emotion = model(cropped_face).argmax()
 
+            # If in debug mode, draw bounding box
             if debug:
                 cv2.rectangle(detected_face_in_image, (max(x-20,0),max(y-20, 0)), (x+w+20, y+h+20), colors[predicted_emotion], 4)
                 cv2.putText(detected_face_in_image, ['angry', 'happy', 'neutral'][predicted_emotion], (x,y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, colors[predicted_emotion], 2)
@@ -113,9 +122,12 @@ def runcameraclassification():
             transformed_frame = transform(Image.fromarray(gray_frame)).to(device)
             transformed_frame = torch.unsqueeze(transformed_frame, 0) # 1, H, W -> 1,1, H, W (maybe its w,h but that doesnt really matter)
             predicted_emotion = model(transformed_frame).argmax()
+        
+        # Update emotion counts (for current period in game)
         config.emotion = predicted_emotion
         config.counts[predicted_emotion] += 1
-        # Display
+        
+        # Display if in debug mode
         if debug:
             detected_face_in_image = cv2.resize(detected_face_in_image, (400,300))
             cv2.imshow('Camera', detected_face_in_image) # Bounding box image
@@ -123,11 +135,15 @@ def runcameraclassification():
         # Press 'q' to exit the loop
         if cv2.waitKey(1) == ord('q'): # or cv2.getWindowProperty('Camera', cv2.WND_PROP_VISIBLE) < 1: # This one is for if the window was closed (X button)
             camera_running = False
+    
+    # Deinitialize (tells game to stop)
     config.initialized = False
 
+    # Release resources
     camera.release()
     cv2.destroyAllWindows()
 
+# For debug purposes. 
 def printing():
     global camera_running
     time.sleep(5)
@@ -143,16 +159,19 @@ def main():
         prog='main.py',
     )
     parser.add_argument('-d','--debug')
+    
+    # Check if debug mode
     if parser.parse_args().debug is not None:
         config.debug = True
 
     t1 = threading.Thread(target=runcameraclassification)
     t2 = threading.Thread(target=game)
     # t2 = threading.Thread(target=printing) #NOTE: Replace this with game.
+    
     t1.start()
     t2.start()
-    # Below is experimentation
     t2.join()
+    # Stop the camera
     camera_running = False
     t1.join()
 

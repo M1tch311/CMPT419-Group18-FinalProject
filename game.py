@@ -7,8 +7,6 @@ import os
 
 # CONSTANTS
 # Set up the game window
-# window_x = 800
-# window_y = 600
 window_x = 1000
 window_y = 800
 pillar_height = int(window_y * 0.75)
@@ -213,7 +211,7 @@ def game():
             config.counts[2] = 0
             
             argmax_v = emotion_counts.index(max(emotion_counts))
-            # For testing purposes, sometimes getting angry classifications is difficult. 
+            # For testing purposes, sometimes getting angry classifications is difficult. Especially with inconsistent lighting
             # if emotion_counts[0] > 30:
             #     argmax_v = 0
             if argmax_v == 0:
@@ -231,6 +229,7 @@ def game():
             if (obstacle.pos.x + obstacle.size.x) < 0:
                 obstacles.remove(obstacle)
         
+        # Spawn new update on timer
         if spawn_timer <= 0:
             obstacles.extend(createObstacle(Vec2d(window_x + 100, random.randint(200, 600))))
             spawn_timer = random.randint(80 - 10 * difficulty, 120 - 12 * difficulty) # Change this with difficulty
@@ -240,6 +239,7 @@ def game():
         player.update()
         hits = pygame.sprite.spritecollide(player, obstacles, False)
         
+        # Handle collisions
         for hit in hits:
             if isinstance(hit, ScoreObject):
                 obstacles.remove(hit)
@@ -287,18 +287,20 @@ def game():
                 continue
             screen.blit(obstacle.image, obstacle.pos.getTuple())
 
-        # Menu
+        # Menu at top of screen
         score_bar.fill((0,0,0))
         score_bar.blit(score_font.render(f"Score: {str(score).zfill(6)}", True, (255,255,255)), (0,0))
         score_bar.blit(score_font.render(f"Emotional Response: {last_change}", True, (255,255,255)), (200,0))
         score_bar.blit(score_font.render(f"Next Detect: {query_timer/60:.2f}", True, (255,255,255)), (650,0))
         screen.blit(score_bar,(0,0))
-
+        
+        pygame.display.update()
+        
+        # Update timers
         spawn_timer -= 1
         if config.initialized:
             query_timer -= 1
         
-        pygame.display.update()
         clock.tick(60)
 
 if __name__ == '__main__':
