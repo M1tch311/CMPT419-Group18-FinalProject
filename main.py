@@ -131,10 +131,6 @@ def printing():
         print("Detected Social signal:", ['angry', 'happy', 'neutral'][config.emotion])
         time.sleep(0.5)
 
-def thread2_function():  # Thread to start game, game script has a thread within to sync current_emotion value
-    global current_emotion
-    game_script.game_loop(current_emotion)
-
 def main():
     global camera_running
 
