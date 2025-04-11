@@ -61,3 +61,7 @@ NOTES:
 ├── saved_models            # Saved trained models
 ├── utils.py                # Shared items
 └── README.md
+
+
+## Self Evaluation
+We believe that we have completed a project within the confines of our original proposal. While in the proposal, we originally planned on using video sequence classification using RNNs, we decided against it for performance reasons. Classification of a sequence of images would consume significantly more resources than the frame-based approach we decided on. In addition, while we speculated that we would think about other ways to include the emotional response into the game, we were unable to do so within the scope of this project.
