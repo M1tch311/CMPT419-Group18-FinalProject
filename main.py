@@ -5,12 +5,13 @@ import torchvision.transforms as transforms
 from PIL import Image
 import threading
 import time
+import config
+from game import game
+
 
 class EnjoymentClassifier(nn.Module):
     def __init__(self, num_classes):
         super(EnjoymentClassifier, self).__init__()
-
-        # TODO 2: construct your own model. CNNs+LSTM is recommended
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),
@@ -43,7 +44,6 @@ class EnjoymentClassifier(nn.Module):
 
         
     def forward(self, x):
-        
 
         x = self.conv1(x)  # [B, 32, 64, 64]
         x = self.conv2(x)  # [B, 64, 32, 32]
@@ -53,11 +53,10 @@ class EnjoymentClassifier(nn.Module):
         return x
 
 camera_running = True
-current_emotion = 2
 
 def runcameraclassification():
+    config.initialized = True
     global camera_running
-    global current_emotion
     camera = cv2.VideoCapture(0)
     # Use a pretrained model for the facial detection
     face_classifier = cv2.CascadeClassifier(
@@ -75,6 +74,8 @@ def runcameraclassification():
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
+    debug = True
+    colors = [(0,0,255), (0,255,255),(255,0,0)]
     while camera_running:
         _, frame = camera.read()
         detected_face_in_image = frame.copy()
@@ -89,49 +90,57 @@ def runcameraclassification():
             # Take the biggest image (dont think this is the best solution, )
             if (w + h) > (biggest_face_box[2] + biggest_face_box[3]):
                 biggest_face_box = [x,y,w,h]
-            cv2.rectangle(detected_face_in_image, (x,y), (x+w, y+h), (0, 255, 0), 4)
-        
-        # Display
-        cv2.imshow('Camera', detected_face_in_image) # Bounding box image
-        
+            # cv2.rectangle(detected_face_in_image, (x,y), (x+w, y+h), (0, 255, 0), 4)
+                
         # If we found a face. Show it in a different window
         if biggest_face_box[2] + biggest_face_box[3] > 0:
             cropped_face = frame[max(y-50, 0):y+h+50, max(x-50, 0):x+w+50]
             resized_face = cv2.resize(cropped_face, (300, 300))
-            cv2.imshow('Cropped Face', resized_face)
+            # Show face in different window
+            # cv2.imshow('Cropped Face', resized_face)
             cropped_face = Image.fromarray(cropped_face)
             
             cropped_face = transform(cropped_face)
             cropped_face = cropped_face.to(device)
             cropped_face = torch.unsqueeze(cropped_face, 0)
             predicted_emotion = model(cropped_face).argmax()
-            current_emotion = predicted_emotion
-              
+            if debug:
+                cv2.rectangle(detected_face_in_image, (max(x-20,0),max(y-20, 0)), (x+w+20, y+h+20), colors[predicted_emotion], 4)
+                cv2.putText(detected_face_in_image, ['angry', 'happy', 'neutral'][predicted_emotion], (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, colors[predicted_emotion], 2)
+            config.emotion = predicted_emotion
+            config.counts[predicted_emotion] += 1
+
+        # Display
+        if debug:
+            detected_face_in_image = cv2.resize(detected_face_in_image, (400,300))
+            cv2.imshow('Camera', detected_face_in_image) # Bounding box image
+
         # Press 'q' to exit the loop
         if cv2.waitKey(1) == ord('q'): # or cv2.getWindowProperty('Camera', cv2.WND_PROP_VISIBLE) < 1: # This one is for if the window was closed (X button)
             camera_running = False
-    
+    config.initialized = False
     camera.release()
     cv2.destroyAllWindows()
 
 def printing():
     global camera_running
-    global current_emotion
+    time.sleep(5)
     while camera_running:
-        print("Detected Social signal:", ['angry', 'happy', 'neutral'][current_emotion])
+        print("Detected Social signal:", ['angry', 'happy', 'neutral'][config.emotion])
+        time.sleep(0.5)
 
 
 def main():
     global camera_running
     t1 = threading.Thread(target=runcameraclassification)
-    t2 = threading.Thread(target=printing) #NOTE: Replace this with game.
+    t2 = threading.Thread(target=game) #NOTE: Replace this with game.
+    # t2 = threading.Thread(target=printing) #NOTE: Replace this with game.
     t1.start()
     t2.start()
     # Below is experimentation
-    time.sleep(10)
+    t2.join()
     camera_running = False
     t1.join()
-    t2.join()
     
 
 if __name__ == '__main__':
