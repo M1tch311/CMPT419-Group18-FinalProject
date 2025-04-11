@@ -25,6 +25,11 @@ To run the project, use the following command:
 python main.py
 ```
 
+To run the project with camera visualization, use the following command:
+```bash
+python main.py --debug True
+```
+
 To run the game without the camera/emotional adaptiveness, use the following command:
 ```bash
 python game.py
@@ -33,12 +38,11 @@ python game.py
 NOTES:
 - To run the game, ensure the game.py, main.py, assets, config.py, and utils.py are in the same directory.
 - CV2 takes time to start up the camera and loop. This is why the game is initially paused. Unpause using `ESC`.
+- With the camera open, closing the game will automatically close the camera.
+- Clicking into the camera window and pressing `q` will close the window and stop the detection, allowing the game to continue.
 
 
-## Run
-
-
-Directory Structure
+## Project File Structure
 .
 ├── assets                  # Game assets
 ├── config.py               # Global variables shared between game and classifier

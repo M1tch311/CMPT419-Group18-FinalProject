@@ -74,8 +74,9 @@ def runcameraclassification():
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
-    debug = True
+    debug = config.debug
     colors = [(0,0,255), (0,255,255),(255,0,0)]
+    print("Camera initialized!")
     while camera_running:
         _, frame = camera.read()
         detected_face_in_image = frame.copy()
@@ -136,6 +137,14 @@ def printing():
 
 def main():
     global camera_running
+
+    import argparse
+    parser = argparse.ArgumentParser(
+        prog='main.py',
+    )
+    parser.add_argument('-d','--debug')
+    if parser.parse_args().debug is not None:
+        config.debug = True
 
     t1 = threading.Thread(target=runcameraclassification)
     t2 = threading.Thread(target=game)
