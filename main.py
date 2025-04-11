@@ -107,10 +107,13 @@ def runcameraclassification():
 
             if debug:
                 cv2.rectangle(detected_face_in_image, (max(x-20,0),max(y-20, 0)), (x+w+20, y+h+20), colors[predicted_emotion], 4)
-                cv2.putText(detected_face_in_image, ['angry', 'happy', 'neutral'][predicted_emotion], (x,y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, colors[predicted_emotion], 2)
-            config.emotion = predicted_emotion
-            config.counts[predicted_emotion] += 1
-
+                cv2.putText(detected_face_in_image, ['angry', 'happy', 'neutral'][predicted_emotion], (x,y-30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, colors[predicted_emotion], 2)
+        else: # If the face detection algorithm fails, pass the raw input image
+            transformed_frame = transform(Image.fromarray(gray_frame)).to(device)
+            transformed_frame = torch.unsqueeze(transformed_frame, 0) # 1, H, W -> 1,1, H, W (maybe its w,h but that doesnt really matter)
+            predicted_emotion = model(transformed_frame).argmax()
+        config.emotion = predicted_emotion
+        config.counts[predicted_emotion] += 1
         # Display
         if debug:
             detected_face_in_image = cv2.resize(detected_face_in_image, (400,300))

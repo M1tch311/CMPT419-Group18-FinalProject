@@ -200,19 +200,22 @@ def game():
         
         if paused:
             screen.blit(game_over_font.render(f"PAUSED", True, (255,255,255)), (window_x//2-100,window_y//2-50))
+            screen.blit(score_font.render(f"Press ESC to continue", True, (255,255,255)), (window_x//2-125,window_y//2+50))
             pygame.display.update()
             continue
         # Game Logic
         # Emotion -> change
         if query_timer <= 0:
             emotion_counts = config.counts.copy()
+            # Reset counts for the next period of time
             config.counts[0] = 0
             config.counts[1] = 0
             config.counts[2] = 0
             
             argmax_v = emotion_counts.index(max(emotion_counts))
-            if emotion_counts[0] > 30:
-                argmax_v = 0
+            # For testing purposes, sometimes getting angry classifications is difficult. 
+            # if emotion_counts[0] > 30:
+            #     argmax_v = 0
             if argmax_v == 0:
                 difficulty = max(difficulty - 1, 0)
             elif argmax_v == 1:
@@ -220,7 +223,7 @@ def game():
             else:
                 difficulty = min(difficulty + 1, 7)
             last_change = changes[argmax_v]
-            query_timer = 600
+            query_timer = 600 # 10 seconds:
 
         # Update Obstacles
         for obstacle in obstacles.copy(): # Need copy else double update
