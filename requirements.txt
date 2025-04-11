@@ -1,5 +1,7 @@
-torch torchvision
+torch
+torchvision
 matplotlib
 pillow
 opencv-python
 pygame
+numpy
